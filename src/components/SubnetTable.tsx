@@ -8,19 +8,20 @@ function collectLeaves(node: SubnetNode): SubnetNode[] {
   return [...collectLeaves(node.children[0]), ...collectLeaves(node.children[1])];
 }
 
-function findJoinableParents(node: SubnetNode): Map<string, SubnetNode> {
-  const parents = new Map<string, SubnetNode>();
+// Find parents whose both children are leaves (mergeable pairs)
+function findMergeableParents(node: SubnetNode): Map<string, { parentId: string; cidr: number }> {
+  const result = new Map<string, { parentId: string; cidr: number }>();
   function walk(n: SubnetNode) {
     if (!n.children) return;
     if (!n.children[0].children && !n.children[1].children) {
-      parents.set(n.children[0].id, n);
-      parents.set(n.children[1].id, n);
+      result.set(n.children[0].id, { parentId: n.id, cidr: n.cidr });
+      result.set(n.children[1].id, { parentId: n.id, cidr: n.cidr });
     }
     walk(n.children[0]);
     walk(n.children[1]);
   }
   walk(node);
-  return parents;
+  return result;
 }
 
 function SizeBar({ rootNode }: { rootNode: SubnetNode }) {
@@ -47,7 +48,7 @@ function SizeBar({ rootNode }: { rootNode: SubnetNode }) {
                 {leaf.label || `/${leaf.cidr}`}
               </span>
             )}
-            <div className="absolute bottom-full mb-2 hidden group-hover/bar:flex flex-col items-center z-20">
+            <div className="absolute bottom-full mb-2 hidden group-hover/bar:flex flex-col items-center z-20 pointer-events-none">
               <div className="bg-[var(--color-text)] text-[var(--color-surface)] text-[10px] px-2.5 py-1.5 rounded-lg whitespace-nowrap shadow-lg">
                 {leaf.label || `/${leaf.cidr}`} — {totalAddresses(leaf.cidr).toLocaleString()} IPs
               </div>
@@ -63,12 +64,11 @@ function SizeBar({ rootNode }: { rootNode: SubnetNode }) {
 export default function SubnetTable() {
   const rootNode = useStore((s) => s.rootNode);
   const groups = useStore((s) => s.groups);
-  const joinSubnet = useStore((s) => s.joinSubnet);
 
   if (!rootNode) return null;
 
   const leaves = collectLeaves(rootNode);
-  const joinableParents = findJoinableParents(rootNode);
+  const mergeInfo = findMergeableParents(rootNode);
 
   // Build group runs for border regions
   const groupRuns: { groupId: string; startIdx: number; endIdx: number }[] = [];
@@ -102,25 +102,6 @@ export default function SubnetTable() {
     }
   }
 
-  // Build join brackets
-  const joinBrackets: { topIdx: number; bottomIdx: number; parentId: string; cidr: number }[] = [];
-  const seen = new Set<string>();
-  leaves.forEach((leaf, i) => {
-    const parent = joinableParents.get(leaf.id);
-    if (parent && !seen.has(parent.id)) {
-      seen.add(parent.id);
-      const siblingIdx = leaves.findIndex((l) => l.id !== leaf.id && joinableParents.get(l.id)?.id === parent.id);
-      if (siblingIdx !== -1) {
-        joinBrackets.push({
-          topIdx: Math.min(i, siblingIdx),
-          bottomIdx: Math.max(i, siblingIdx),
-          parentId: parent.id,
-          cidr: parent.cidr,
-        });
-      }
-    }
-  });
-
   return (
     <div className="rounded-2xl border border-[var(--color-border)] overflow-hidden bg-[var(--color-surface)]">
       {/* Visual size bar */}
@@ -128,71 +109,41 @@ export default function SubnetTable() {
         <SizeBar rootNode={rootNode} />
       </div>
 
-      <div className="flex">
-        {/* Main table */}
-        <div className="flex-1 min-w-0">
-          <table className="w-full text-left">
-            <thead>
-              <tr className="border-b border-[var(--color-border)] bg-[var(--color-surface-alt)]">
-                <th className="w-12 pl-4 pr-1 py-2.5 text-[10px] font-semibold uppercase tracking-wider text-[var(--color-text-muted)]" />
-                <th className="px-3 py-2.5 text-[10px] font-semibold uppercase tracking-wider text-[var(--color-text-muted)]">Subnet Address</th>
-                <th className="hidden lg:table-cell px-3 py-2.5 text-[10px] font-semibold uppercase tracking-wider text-[var(--color-text-muted)]">Range of Addresses</th>
-                <th className="hidden xl:table-cell px-3 py-2.5 text-[10px] font-semibold uppercase tracking-wider text-[var(--color-text-muted)]">Useable IPs</th>
-                <th className="px-3 py-2.5 text-right text-[10px] font-semibold uppercase tracking-wider text-[var(--color-text-muted)]">Hosts</th>
-                <th className="px-3 py-2.5 text-[10px] font-semibold uppercase tracking-wider text-[var(--color-text-muted)]">Label</th>
-                <th className="px-3 py-2.5 text-center text-[10px] font-semibold uppercase tracking-wider text-[var(--color-text-muted)]">Divide</th>
-                <th className="w-10 pr-4 py-2.5" />
-              </tr>
-            </thead>
-            <tbody>
-              {leaves.map((leaf, i) => {
-                const info = leafGroupInfo.get(i);
-                return (
-                  <SubnetRow
-                    key={leaf.id}
-                    node={leaf}
-                    index={i}
-                    groups={groups}
-                    isFirstInGroup={info?.isFirst}
-                    isLastInGroup={info?.isLast}
-                    groupForRow={info?.group}
-                  />
-                );
-              })}
-            </tbody>
-          </table>
-        </div>
-
-        {/* Join bracket column */}
-        {joinBrackets.length > 0 && (
-          <div className="w-14 shrink-0 border-l border-[var(--color-border)] bg-[var(--color-surface-alt)]">
-            <div className="h-[41px] border-b border-[var(--color-border)] flex items-center justify-center text-[10px] font-semibold uppercase tracking-wider text-[var(--color-text-muted)]">
-              Join
-            </div>
-            <div className="relative">
-              {joinBrackets.map((bracket) => {
-                const rowHeight = 49;
-                const top = bracket.topIdx * rowHeight + 4;
-                const height = (bracket.bottomIdx - bracket.topIdx + 1) * rowHeight - 8;
-                return (
-                  <button
-                    key={bracket.parentId}
-                    onClick={() => joinSubnet(bracket.parentId)}
-                    className="absolute left-2 right-2 flex items-center justify-center text-[var(--color-text-muted)] hover:text-amber-400 transition-colors cursor-pointer"
-                    style={{ top: `${top}px`, height: `${height}px` }}
-                    aria-label={`Join into /${bracket.cidr}`}
-                    title={`Join into /${bracket.cidr}`}
-                  >
-                    <svg className="w-full h-full" viewBox="0 0 24 60" preserveAspectRatio="none" fill="none" stroke="currentColor" strokeWidth={1.5}>
-                      <path d="M4,2 L18,2 L18,58 L4,58" strokeLinecap="round" strokeLinejoin="round" />
-                    </svg>
-                  </button>
-                );
-              })}
-            </div>
-          </div>
-        )}
-      </div>
+      {/* Table */}
+      <table className="w-full text-left">
+        <thead>
+          <tr className="border-b border-[var(--color-border)] bg-[var(--color-surface-alt)]">
+            <th className="w-1.5 p-0" />
+            <th className="px-4 py-2.5 text-[10px] font-semibold uppercase tracking-wider text-[var(--color-text-muted)]">Subnet Address</th>
+            <th className="hidden lg:table-cell px-3 py-2.5 text-[10px] font-semibold uppercase tracking-wider text-[var(--color-text-muted)]">Range of Addresses</th>
+            <th className="hidden xl:table-cell px-3 py-2.5 text-[10px] font-semibold uppercase tracking-wider text-[var(--color-text-muted)]">Useable IPs</th>
+            <th className="px-3 py-2.5 text-right text-[10px] font-semibold uppercase tracking-wider text-[var(--color-text-muted)]">Hosts</th>
+            <th className="px-3 py-2.5 text-[10px] font-semibold uppercase tracking-wider text-[var(--color-text-muted)]">Label</th>
+            <th className="px-3 py-2.5 text-center text-[10px] font-semibold uppercase tracking-wider text-[var(--color-text-muted)]">Divide</th>
+            <th className="w-10 pr-4 py-2.5" />
+          </tr>
+        </thead>
+        <tbody>
+          {leaves.map((leaf, i) => {
+            const info = leafGroupInfo.get(i);
+            const merge = mergeInfo.get(leaf.id);
+            return (
+              <SubnetRow
+                key={leaf.id}
+                node={leaf}
+                index={i}
+                groups={groups}
+                canMerge={!!merge}
+                mergeParentId={merge?.parentId}
+                mergeCidr={merge?.cidr}
+                isFirstInGroup={info?.isFirst}
+                isLastInGroup={info?.isLast}
+                groupForRow={info?.group}
+              />
+            );
+          })}
+        </tbody>
+      </table>
     </div>
   );
 }
