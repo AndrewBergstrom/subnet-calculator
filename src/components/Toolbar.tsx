@@ -2,11 +2,22 @@ import { useState, useRef } from 'react';
 import { useStore } from '../store';
 import { SUBNET_COLORS } from '../constants';
 import { importFromJson } from '../lib/export';
+import type { ColumnVisibility } from '../types';
+
+const COLUMN_LABELS: { key: keyof ColumnVisibility; label: string }[] = [
+  { key: 'netmask', label: 'Netmask' },
+  { key: 'range', label: 'Range' },
+  { key: 'usableIps', label: 'Useable IPs' },
+  { key: 'hosts', label: 'Hosts' },
+  { key: 'label', label: 'Label' },
+];
 
 export default function Toolbar() {
   const groups = useStore((s) => s.groups);
+  const columns = useStore((s) => s.columns);
   const addGroup = useStore((s) => s.addGroup);
   const removeGroup = useStore((s) => s.removeGroup);
+  const toggleColumn = useStore((s) => s.toggleColumn);
   const exportState = useStore((s) => s.exportState);
   const importState = useStore((s) => s.importState);
 
@@ -14,6 +25,7 @@ export default function Toolbar() {
   const [newName, setNewName] = useState('');
   const [newColor, setNewColor] = useState(SUBNET_COLORS[5]);
   const [importError, setImportError] = useState(false);
+  const [copied, setCopied] = useState(false);
   const fileRef = useRef<HTMLInputElement>(null);
 
   const handleAddGroup = (e: React.FormEvent) => {
@@ -55,11 +67,36 @@ export default function Toolbar() {
     if (fileRef.current) fileRef.current.value = '';
   };
 
+  const handleCopyLink = () => {
+    navigator.clipboard.writeText(window.location.href).then(() => {
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2000);
+    });
+  };
+
   return (
-    <div className="space-y-2">
+    <div className="space-y-3">
+      {/* Row 1: Column toggles */}
+      <div className="flex items-center gap-3 flex-wrap">
+        <span className="text-[10px] font-semibold text-[var(--color-text-muted)] uppercase tracking-wider">Columns</span>
+        {COLUMN_LABELS.map(({ key, label }) => (
+          <label key={key} className="inline-flex items-center gap-1.5 cursor-pointer text-xs">
+            <input
+              type="checkbox"
+              checked={columns[key]}
+              onChange={() => toggleColumn(key)}
+              className="rounded border-[var(--color-border)] text-ahead-blue focus:ring-ahead-cyan/40 w-3.5 h-3.5 cursor-pointer"
+            />
+            <span className={columns[key] ? 'text-[var(--color-text)]' : 'text-[var(--color-text-muted)]'}>
+              {label}
+            </span>
+          </label>
+        ))}
+      </div>
+
+      {/* Row 2: Groups + Actions */}
       <div className="flex items-center gap-2 flex-wrap">
-        {/* Groups label + chips */}
-        <span className="text-xs font-semibold text-[var(--color-text-muted)] uppercase tracking-wider">Groups</span>
+        <span className="text-[10px] font-semibold text-[var(--color-text-muted)] uppercase tracking-wider">Groups</span>
 
         {groups.map((g) => (
           <span
@@ -80,7 +117,6 @@ export default function Toolbar() {
           </span>
         ))}
 
-        {/* Add group button / inline form */}
         {showAddGroup ? (
           <form onSubmit={handleAddGroup} className="inline-flex items-center gap-1.5">
             <div className="flex gap-1">
@@ -133,10 +169,20 @@ export default function Toolbar() {
           </button>
         )}
 
-        {/* Spacer */}
         <div className="flex-1" />
 
-        {/* Export / Import */}
+        {/* Copy Link */}
+        <button
+          onClick={handleCopyLink}
+          className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-xs font-medium border border-[var(--color-border)] hover:bg-[var(--color-surface-hover)] transition-all"
+        >
+          <svg className="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+            <path strokeLinecap="round" strokeLinejoin="round" d="M13.19 8.688a4.5 4.5 0 011.242 7.244l-4.5 4.5a4.5 4.5 0 01-6.364-6.364l1.757-1.757m9.86-3.061a4.5 4.5 0 00-1.242-7.244l4.5-4.5a4.5 4.5 0 016.364 6.364l-1.757 1.757" />
+          </svg>
+          {copied ? 'Copied!' : 'Copy Link'}
+        </button>
+
+        {/* Export */}
         <button
           onClick={handleExport}
           aria-label="Export configuration as JSON"
@@ -147,6 +193,8 @@ export default function Toolbar() {
           </svg>
           Export
         </button>
+
+        {/* Import */}
         <label className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-xs font-medium border border-[var(--color-border)] hover:bg-[var(--color-surface-hover)] transition-all cursor-pointer">
           <svg className="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
             <path strokeLinecap="round" strokeLinejoin="round" d="M3 16.5v2.25A2.25 2.25 0 005.25 21h13.5A2.25 2.25 0 0021 18.75V16.5m-13.5-9L12 3m0 0l4.5 4.5M12 3v13.5" />

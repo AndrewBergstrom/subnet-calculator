@@ -1,6 +1,7 @@
 import type { SubnetNode, Group } from '../types';
 import { useStore } from '../store';
 import { totalAddresses } from '../lib/subnet-math';
+import type { ColumnVisibility } from '../types';
 import SubnetRow from './SubnetRow';
 
 function collectLeaves(node: SubnetNode): SubnetNode[] {
@@ -71,9 +72,18 @@ function AddressMap({ rootNode, groups }: { rootNode: SubnetNode; groups: Group[
   );
 }
 
+function Th({ children, className = '' }: { children?: React.ReactNode; className?: string }) {
+  return (
+    <th className={`px-3 py-2.5 text-[10px] font-semibold uppercase tracking-wider text-[var(--color-text-muted)] ${className}`}>
+      {children}
+    </th>
+  );
+}
+
 export default function SubnetTable() {
   const rootNode = useStore((s) => s.rootNode);
   const groups = useStore((s) => s.groups);
+  const columns = useStore((s) => s.columns);
 
   if (!rootNode) return null;
 
@@ -121,14 +131,15 @@ export default function SubnetTable() {
       <table className="w-full text-left">
         <thead>
           <tr className="border-b border-[var(--color-border)] bg-[var(--color-surface-alt)]">
-            <th className="w-1.5 p-0" />
-            <th className="px-4 py-2.5 text-[10px] font-semibold uppercase tracking-wider text-[var(--color-text-muted)]">Subnet Address</th>
-            <th className="hidden lg:table-cell px-3 py-2.5 text-[10px] font-semibold uppercase tracking-wider text-[var(--color-text-muted)]">Range of Addresses</th>
-            <th className="hidden xl:table-cell px-3 py-2.5 text-[10px] font-semibold uppercase tracking-wider text-[var(--color-text-muted)]">Useable IPs</th>
-            <th className="px-3 py-2.5 text-right text-[10px] font-semibold uppercase tracking-wider text-[var(--color-text-muted)]">Hosts</th>
-            <th className="px-3 py-2.5 text-[10px] font-semibold uppercase tracking-wider text-[var(--color-text-muted)]">Label</th>
-            <th className="px-3 py-2.5 text-center text-[10px] font-semibold uppercase tracking-wider text-[var(--color-text-muted)]">Divide</th>
-            <th className="w-10 pr-4 py-2.5" />
+            <Th className="w-1.5 p-0" />
+            <Th>Subnet Address</Th>
+            {columns.netmask && <Th>Netmask</Th>}
+            {columns.range && <Th className="hidden lg:table-cell">Range of Addresses</Th>}
+            {columns.usableIps && <Th className="hidden xl:table-cell">Useable IPs</Th>}
+            {columns.hosts && <Th className="text-right">Hosts</Th>}
+            {columns.label && <Th>Label</Th>}
+            <Th className="text-center">Divide</Th>
+            <Th className="w-10 pr-4" />
           </tr>
         </thead>
         <tbody>
@@ -141,6 +152,7 @@ export default function SubnetTable() {
                 node={leaf}
                 index={i}
                 groups={groups}
+                columns={columns}
                 canMerge={!!merge}
                 mergeParentId={merge?.parentId}
                 mergeCidr={merge?.cidr}

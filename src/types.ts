@@ -17,11 +17,28 @@ export interface Group {
 
 export type CloudMode = 'none' | 'azure' | 'aws';
 
+export interface ColumnVisibility {
+  netmask: boolean;
+  range: boolean;
+  usableIps: boolean;
+  hosts: boolean;
+  label: boolean;
+}
+
+export const DEFAULT_COLUMNS: ColumnVisibility = {
+  netmask: false,
+  range: true,
+  usableIps: true,
+  hosts: true,
+  label: true,
+};
+
 export interface AppState {
   rootNode: SubnetNode | null;
   groups: Group[];
   cloudMode: CloudMode;
   darkMode: boolean;
+  columns: ColumnVisibility;
 
   setNetwork: (cidr: string) => void;
   splitSubnet: (nodeId: string) => void;
@@ -32,6 +49,8 @@ export interface AppState {
   updateGroup: (groupId: string, updates: Partial<Pick<Group, 'name' | 'color'>>) => void;
   setCloudMode: (mode: CloudMode) => void;
   toggleDarkMode: () => void;
+  toggleColumn: (col: keyof ColumnVisibility) => void;
+  reset: () => void;
   exportState: () => string;
   importState: (json: string) => void;
 }

@@ -1,8 +1,12 @@
+import { useStore } from '../store';
 import NetworkInput from './NetworkInput';
 import CloudModeSelector from './CloudModeSelector';
 import ThemeToggle from './ThemeToggle';
 
 export default function Header() {
+  const rootNode = useStore((s) => s.rootNode);
+  const reset = useStore((s) => s.reset);
+
   return (
     <header className="glass sticky top-0 z-50 border-b border-[var(--color-border)]">
       <div className="max-w-[1400px] mx-auto px-4 md:px-6 py-3 md:py-4 flex items-center justify-between gap-3 md:gap-4 flex-wrap">
@@ -20,8 +24,17 @@ export default function Header() {
           </div>
         </div>
 
-        <div className="flex items-center gap-3 flex-wrap">
+        <div className="flex items-center gap-2 md:gap-3 flex-wrap">
           <NetworkInput />
+          {rootNode && (
+            <button
+              onClick={reset}
+              className="px-3 py-2 rounded-xl text-xs font-medium border border-[var(--color-border)] text-[var(--color-text-secondary)] hover:text-[var(--color-text)] hover:bg-[var(--color-surface-hover)] transition-all"
+              aria-label="Reset calculator"
+            >
+              Reset
+            </button>
+          )}
           <CloudModeSelector />
           <ThemeToggle />
         </div>

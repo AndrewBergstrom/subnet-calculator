@@ -1,5 +1,6 @@
 import { create } from 'zustand';
-import type { AppState, SubnetNode, CloudMode } from './types';
+import type { AppState, SubnetNode, CloudMode, ColumnVisibility } from './types';
+import { DEFAULT_COLUMNS } from './types';
 import { parseCidr, networkAddress } from './lib/subnet-math';
 import { exportToJson, importFromJson } from './lib/export';
 
@@ -50,17 +51,61 @@ function splitNode(node: SubnetNode): SubnetNode {
   };
 }
 
+// --- URL state encoding ---
+
+function encodeStateToUrl(state: Pick<AppState, 'rootNode' | 'groups' | 'cloudMode' | 'columns'>): void {
+  try {
+    const data = {
+      v: 1,
+      r: state.rootNode,
+      g: state.groups,
+      c: state.cloudMode,
+      cols: state.columns,
+    };
+    const json = JSON.stringify(data);
+    const encoded = btoa(encodeURIComponent(json));
+    window.history.replaceState(null, '', `#${encoded}`);
+  } catch {
+    // Silently fail — URL sharing is optional
+  }
+}
+
+function decodeStateFromUrl(): { rootNode: SubnetNode; groups: any[]; cloudMode: CloudMode; columns?: ColumnVisibility } | null {
+  try {
+    const hash = window.location.hash.slice(1);
+    if (!hash) return null;
+    const json = decodeURIComponent(atob(hash));
+    const data = JSON.parse(json);
+    if (data.v !== 1 || !data.r) return null;
+    return {
+      rootNode: data.r,
+      groups: data.g || [],
+      cloudMode: data.c || 'none',
+      columns: data.cols,
+    };
+  } catch {
+    return null;
+  }
+}
+
+// Try to load initial state from URL
+const urlState = decodeStateFromUrl();
+
 export const useStore = create<AppState>((set, get) => ({
-  rootNode: null,
-  groups: [],
-  cloudMode: 'none',
+  rootNode: urlState?.rootNode || null,
+  groups: urlState?.groups || [],
+  cloudMode: urlState?.cloudMode || 'none',
   darkMode: true,
+  columns: urlState?.columns || { ...DEFAULT_COLUMNS },
 
   setNetwork: (cidrStr: string) => {
     const parsed = parseCidr(cidrStr);
     if (!parsed) return;
     const netAddr = networkAddress(parsed.ip, parsed.prefix);
-    set({ rootNode: createNode(netAddr, parsed.prefix, 'root') });
+    const rootNode = createNode(netAddr, parsed.prefix, 'root');
+    set({ rootNode, groups: [] });
+    const state = get();
+    encodeStateToUrl(state);
   },
 
   splitSubnet: (nodeId: string) => {
@@ -72,6 +117,7 @@ export const useStore = create<AppState>((set, get) => ({
     const split = splitNode(target);
     Object.assign(target, split);
     set({ rootNode: newRoot });
+    encodeStateToUrl(get());
   },
 
   joinSubnet: (nodeId: string) => {
@@ -86,6 +132,7 @@ export const useStore = create<AppState>((set, get) => ({
     target.color = null;
     target.groupId = null;
     set({ rootNode: newRoot });
+    encodeStateToUrl(get());
   },
 
   updateSubnet: (nodeId, updates) => {
@@ -96,17 +143,18 @@ export const useStore = create<AppState>((set, get) => ({
     if (!target) return;
     Object.assign(target, updates);
     set({ rootNode: newRoot });
+    encodeStateToUrl(get());
   },
 
   addGroup: (name, color) => {
     set((state) => ({
       groups: [...state.groups, { id: crypto.randomUUID(), name, color }],
     }));
+    encodeStateToUrl(get());
   },
 
   removeGroup: (groupId) => {
     const { rootNode } = get();
-    // Clear groupId from any subnet that references this group
     const newRoot = rootNode
       ? cloneTree(rootNode, (n) => {
           if (n.groupId === groupId) return { ...n, groupId: null };
@@ -117,6 +165,7 @@ export const useStore = create<AppState>((set, get) => ({
       groups: state.groups.filter((g) => g.id !== groupId),
       rootNode: newRoot,
     }));
+    encodeStateToUrl(get());
   },
 
   updateGroup: (groupId, updates) => {
@@ -125,9 +174,13 @@ export const useStore = create<AppState>((set, get) => ({
         g.id === groupId ? { ...g, ...updates } : g
       ),
     }));
+    encodeStateToUrl(get());
   },
 
-  setCloudMode: (mode: CloudMode) => set({ cloudMode: mode }),
+  setCloudMode: (mode: CloudMode) => {
+    set({ cloudMode: mode });
+    encodeStateToUrl(get());
+  },
 
   toggleDarkMode: () => {
     set((state) => {
@@ -135,6 +188,23 @@ export const useStore = create<AppState>((set, get) => ({
       document.documentElement.classList.toggle('dark', newDark);
       return { darkMode: newDark };
     });
+  },
+
+  toggleColumn: (col: keyof ColumnVisibility) => {
+    set((state) => ({
+      columns: { ...state.columns, [col]: !state.columns[col] },
+    }));
+    encodeStateToUrl(get());
+  },
+
+  reset: () => {
+    set({
+      rootNode: null,
+      groups: [],
+      cloudMode: 'none',
+      columns: { ...DEFAULT_COLUMNS },
+    });
+    window.history.replaceState(null, '', window.location.pathname);
   },
 
   exportState: () => {
@@ -150,5 +220,6 @@ export const useStore = create<AppState>((set, get) => ({
       groups: data.groups,
       cloudMode: data.cloudMode,
     });
+    encodeStateToUrl(get());
   },
 }));

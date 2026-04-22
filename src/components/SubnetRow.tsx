@@ -1,6 +1,6 @@
 import { useState } from 'react';
-import type { SubnetNode, Group } from '../types';
-import { intToIp, totalAddresses, usableHosts, firstUsable, lastUsable, broadcastAddress, canSplit } from '../lib/subnet-math';
+import type { SubnetNode, Group, ColumnVisibility } from '../types';
+import { intToIp, subnetMaskString, totalAddresses, usableHosts, firstUsable, lastUsable, broadcastAddress, canSplit } from '../lib/subnet-math';
 import { useStore } from '../store';
 import { SUBNET_COLORS } from '../constants';
 
@@ -8,6 +8,7 @@ interface SubnetRowProps {
   node: SubnetNode;
   index: number;
   groups: Group[];
+  columns: ColumnVisibility;
   canMerge: boolean;
   mergeParentId?: string;
   mergeCidr?: number;
@@ -16,7 +17,7 @@ interface SubnetRowProps {
   groupForRow?: Group;
 }
 
-export default function SubnetRow({ node, index, groups, canMerge, mergeParentId, mergeCidr, isFirstInGroup, isLastInGroup, groupForRow }: SubnetRowProps) {
+export default function SubnetRow({ node, index, groups, columns, canMerge, mergeParentId, mergeCidr, isFirstInGroup, isLastInGroup, groupForRow }: SubnetRowProps) {
   const [expanded, setExpanded] = useState(false);
   const cloudMode = useStore((s) => s.cloudMode);
   const splitSubnet = useStore((s) => s.splitSubnet);
@@ -67,32 +68,47 @@ export default function SubnetRow({ node, index, groups, canMerge, mergeParentId
           {intToIp(net)}/{prefix}
         </td>
 
+        {/* Netmask */}
+        {columns.netmask && (
+          <td className="px-3 py-3 font-mono text-xs text-[var(--color-text-secondary)] whitespace-nowrap">
+            {subnetMaskString(prefix)}
+          </td>
+        )}
+
         {/* Range of addresses */}
-        <td className="hidden lg:table-cell px-3 py-3 font-mono text-xs text-[var(--color-text-secondary)] whitespace-nowrap">
-          {`${intToIp(net)} - ${intToIp(broadcast)}`}
-        </td>
+        {columns.range && (
+          <td className="hidden lg:table-cell px-3 py-3 font-mono text-xs text-[var(--color-text-secondary)] whitespace-nowrap">
+            {`${intToIp(net)} - ${intToIp(broadcast)}`}
+          </td>
+        )}
 
         {/* Usable IPs */}
-        <td className="hidden xl:table-cell px-3 py-3 font-mono text-xs text-[var(--color-text-secondary)] whitespace-nowrap">
-          {prefix < 31 ? `${intToIp(first)} - ${intToIp(last)}` : intToIp(net)}
-        </td>
+        {columns.usableIps && (
+          <td className="hidden xl:table-cell px-3 py-3 font-mono text-xs text-[var(--color-text-secondary)] whitespace-nowrap">
+            {prefix < 31 ? `${intToIp(first)} - ${intToIp(last)}` : intToIp(net)}
+          </td>
+        )}
 
         {/* Hosts */}
-        <td className="px-3 py-3 text-right font-mono text-sm tabular-nums whitespace-nowrap">
-          {usable.toLocaleString()}
-        </td>
+        {columns.hosts && (
+          <td className="px-3 py-3 text-right font-mono text-sm tabular-nums whitespace-nowrap">
+            {usable.toLocaleString()}
+          </td>
+        )}
 
         {/* Label */}
-        <td className="px-3 py-1.5" onClick={(e) => e.stopPropagation()}>
-          <input
-            type="text"
-            value={node.label}
-            onChange={(e) => updateSubnet(node.id, { label: e.target.value })}
-            placeholder="Add label..."
-            aria-label={`Label for ${intToIp(net)}/${prefix}`}
-            className="w-full min-w-[120px] px-2.5 py-1.5 rounded-lg text-xs bg-transparent border border-transparent hover:border-[var(--color-border)] focus:border-ahead-cyan focus:bg-[var(--color-surface-alt)] focus:outline-none transition-all"
-          />
-        </td>
+        {columns.label && (
+          <td className="px-3 py-1.5" onClick={(e) => e.stopPropagation()}>
+            <input
+              type="text"
+              value={node.label}
+              onChange={(e) => updateSubnet(node.id, { label: e.target.value })}
+              placeholder="Add label..."
+              aria-label={`Label for ${intToIp(net)}/${prefix}`}
+              className="w-full min-w-[120px] px-2.5 py-1.5 rounded-lg text-xs bg-transparent border border-transparent hover:border-[var(--color-border)] focus:border-ahead-cyan focus:bg-[var(--color-surface-alt)] focus:outline-none transition-all"
+            />
+          </td>
+        )}
 
         {/* Divide */}
         <td className="px-3 py-3 text-center whitespace-nowrap" onClick={(e) => e.stopPropagation()}>
@@ -126,7 +142,7 @@ export default function SubnetRow({ node, index, groups, canMerge, mergeParentId
             <div className="w-1.5 h-full" style={{ backgroundColor: effectiveColor || 'transparent' }} />
           </td>
           <td
-            colSpan={7}
+            colSpan={20}
             className="px-4 py-4 bg-[var(--color-surface-alt)] border-b border-[var(--color-border)]"
             onClick={(e) => e.stopPropagation()}
           >
