@@ -72,14 +72,14 @@ export default function SubnetTable() {
       </div>
 
       {/* Column headers */}
-      <div className="flex flex-wrap md:flex-nowrap items-center gap-2 md:gap-3 px-3 md:px-4 py-2 border-b border-[var(--color-border)] bg-[var(--color-surface-alt)] text-[10px] font-semibold uppercase tracking-wider text-[var(--color-text-muted)]">
-        <div className="w-full md:w-40 shrink-0">Network</div>
-        <div className="hidden md:block w-32 shrink-0">Mask</div>
-        <div className="hidden lg:block w-64 shrink-0">Usable Range</div>
-        <div className="shrink-0 md:w-20 md:text-right">Hosts</div>
-        <div className="hidden xl:block w-28 shrink-0">Broadcast</div>
-        <div className="flex-1 min-w-[80px]">Label</div>
-        <div className="shrink-0">Actions</div>
+      <div className="flex items-center gap-3 px-4 py-2 border-b border-[var(--color-border)] bg-[var(--color-surface-alt)] text-[10px] font-semibold uppercase tracking-wider text-[var(--color-text-muted)]">
+        <div className="w-4" /> {/* expand toggle spacer */}
+        <div className="w-36 shrink-0">Network</div>
+        <div className="hidden md:block w-28 shrink-0">Mask</div>
+        <div className="hidden lg:block w-56 shrink-0">Usable Range</div>
+        <div className="w-16 shrink-0 text-right">Hosts</div>
+        <div className="flex-1 min-w-[100px]">Label</div>
+        <div className="w-14 shrink-0" />
       </div>
 
       {/* Rows */}
