@@ -19,7 +19,7 @@ export default function Header() {
           <div>
             <h1 className="text-lg font-semibold leading-tight">Subnet Calculator</h1>
             <p className="text-xs text-[var(--color-text-muted)]">
-              <span className="font-serif italic">by</span> AHEAD
+              <span className="font-serif italic">by</span> Andrew Bergstrom, <span className="font-serif italic">inspired by</span> <a href="https://www.davidc.net/sites/default/subnets/subnets.html" target="_blank" rel="noopener noreferrer" className="hover:text-ahead-cyan transition-colors">David C</a>
             </p>
           </div>
         </div>
