@@ -135,21 +135,29 @@ function JoinBrackets({ rootNode, leafCount, rowHeight }: { rootNode: SubnetNode
   if (brackets.length === 0) return null;
 
   const maxDepth = Math.max(...brackets.map((b) => b.depth));
-  const colWidth = 44; // min 44px for WCAG 2.5.5 touch target
-  const totalWidth = (maxDepth + 1) * colWidth + 4;
+  const colWidth = 20;
+  const totalWidth = (maxDepth + 1) * colWidth + 8;
 
-  // High-contrast alternating fills that pass WCAG AA against white text
-  const depthStyles = [
-    { bg: 'rgba(28, 76, 191, 0.25)', border: 'rgba(28, 76, 191, 0.5)' },   // ahead blue
-    { bg: 'rgba(0, 159, 220, 0.20)', border: 'rgba(0, 159, 220, 0.45)' },   // ahead cyan
-    { bg: 'rgba(139, 92, 246, 0.20)', border: 'rgba(139, 92, 246, 0.45)' }, // violet
-    { bg: 'rgba(20, 184, 166, 0.20)', border: 'rgba(20, 184, 166, 0.45)' }, // teal
-    { bg: 'rgba(249, 115, 22, 0.20)', border: 'rgba(249, 115, 22, 0.45)' }, // orange
+  // All warm/bright colors that contrast well against dark navy (#102033)
+  // No blues, purples, or teals — they disappear on our background
+  const depthColors = [
+    '#facc15', // yellow
+    '#fb923c', // orange
+    '#4ade80', // lime green
+    '#f472b6', // pink
+    '#f87171', // red
+    '#e2e8f0', // white
+    '#fbbf24', // amber
+    '#34d399', // emerald
+    '#f9a8d4', // light pink
+    '#fdba74', // light orange
+    '#facc15', // repeat
+    '#fb923c',
   ];
 
   return (
     <div
-      className="shrink-0 border-l border-[var(--color-border)] relative"
+      className="shrink-0 border-l border-[var(--color-border)] relative bg-[var(--color-surface-hover)]"
       style={{ width: `${totalWidth}px` }}
     >
       {/* Header with help hint */}
@@ -168,42 +176,42 @@ function JoinBrackets({ rootNode, leafCount, rowHeight }: { rootNode: SubnetNode
         </div>
       </div>
 
-      {/* Brackets */}
+      {/* Brackets — thin lines like DaveC */}
       <div className="relative" style={{ height: `${leafCount * rowHeight}px` }}>
         {brackets.map((bracket) => {
           const top = bracket.startLeafIdx * rowHeight;
           const height = (bracket.endLeafIdx - bracket.startLeafIdx + 1) * rowHeight;
-          const left = bracket.depth * colWidth;
-          const depthStyle = depthStyles[bracket.depth % depthStyles.length];
+          const left = bracket.depth * colWidth + 4;
 
           return (
             <button
               key={bracket.nodeId}
               onClick={() => joinSubnet(bracket.nodeId)}
-              className="absolute flex items-center justify-center cursor-pointer transition-all rounded-sm group/bracket"
+              className="absolute cursor-pointer group/bracket"
               style={{
-                top: `${top + 1}px`,
-                height: `${height - 2}px`,
-                left: `${left + 2}px`,
-                width: `${colWidth - 4}px`,
-                backgroundColor: depthStyle.bg,
-                border: `1.5px solid ${depthStyle.border}`,
+                top: `${top}px`,
+                height: `${height}px`,
+                left: `${left}px`,
+                width: `${colWidth}px`,
               }}
               aria-label={`Click to merge these subnets back into /${bracket.cidr}`}
-              title={`Click to merge back into /${bracket.cidr}`}
+              title={`Merge back into /${bracket.cidr}`}
             >
+              {/* Bracket lines — colored by depth, brighter on hover */}
+              <div className="absolute top-0 left-0 right-1 transition-opacity group-hover/bracket:opacity-100 opacity-50" style={{ height: '2px', backgroundColor: depthColors[bracket.depth % depthColors.length] }} />
+              <div className="absolute top-0 bottom-0 transition-opacity group-hover/bracket:opacity-100 opacity-50" style={{ right: '4px', width: '2px', backgroundColor: depthColors[bracket.depth % depthColors.length] }} />
+              <div className="absolute bottom-0 left-0 right-1 transition-opacity group-hover/bracket:opacity-100 opacity-50" style={{ height: '2px', backgroundColor: depthColors[bracket.depth % depthColors.length] }} />
+              {/* CIDR label */}
               <span
-                className="text-[11px] font-mono font-bold whitespace-nowrap pointer-events-none transition-all group-hover/bracket:scale-110"
+                className="absolute inset-0 flex items-center justify-center text-[9px] font-mono font-semibold transition-opacity group-hover/bracket:opacity-100 opacity-50 pointer-events-none"
                 style={{
                   writingMode: 'vertical-lr',
                   transform: 'rotate(180deg)',
-                  color: 'var(--color-text)',
+                  color: depthColors[bracket.depth % depthColors.length],
                 }}
               >
                 /{bracket.cidr}
               </span>
-              {/* Hover overlay */}
-              <div className="absolute inset-0 rounded-sm bg-white/0 group-hover/bracket:bg-white/10 transition-all" />
             </button>
           );
         })}
