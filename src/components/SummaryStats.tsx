@@ -21,11 +21,15 @@ export default function SummaryStats() {
   const reservedPerSubnet = cloudMode === 'none' ? 2 : 5;
   const totalReserved = leaves.reduce((sum, l) => sum + Math.min(reservedPerSubnet, totalAddresses(l.cidr)), 0);
 
+  const reserveNote = cloudMode === 'none'
+    ? '2 per subnet (network + broadcast)'
+    : `5 per subnet (${cloudLabel} reserved)`;
+
   const stats = [
     { label: 'Network', value: `${intToIp(rootNode.networkAddress)}/${rootNode.cidr}`, sub: subnetMaskString(rootNode.cidr) },
     { label: 'Subnets', value: leaves.length.toString(), sub: `${labeled} labeled` },
-    { label: 'Total IPs', value: rootTotal.toLocaleString(), sub: `${totalUsable.toLocaleString()} usable` },
-    { label: 'Reserved', value: totalReserved.toLocaleString(), sub: `${cloudLabel} mode` },
+    { label: 'Usable IPs', value: totalUsable.toLocaleString(), sub: `of ${rootTotal.toLocaleString()} total` },
+    { label: 'Reserved IPs', value: totalReserved.toLocaleString(), sub: reserveNote },
   ];
 
   return (
