@@ -13,7 +13,7 @@ export default function EmptyState() {
       </p>
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4 max-w-lg">
         {[
-          { title: 'Split & Join', desc: 'Visually split subnets into smaller blocks or join them back' },
+          { title: 'Divide & Join', desc: 'Click Divide to split subnets. Click the brackets on the right to merge them back.' },
           { title: 'Color & Label', desc: 'Annotate subnets with colors, labels, and notes in-place' },
           { title: 'Cloud Aware', desc: 'Azure & AWS modes account for reserved IPs per subnet' },
         ].map((f) => (

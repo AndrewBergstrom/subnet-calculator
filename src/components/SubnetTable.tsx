@@ -135,58 +135,75 @@ function JoinBrackets({ rootNode, leafCount, rowHeight }: { rootNode: SubnetNode
   if (brackets.length === 0) return null;
 
   const maxDepth = Math.max(...brackets.map((b) => b.depth));
-  const colWidth = 28; // width per bracket nesting level
-  const totalWidth = (maxDepth + 1) * colWidth;
+  const colWidth = 44; // min 44px for WCAG 2.5.5 touch target
+  const totalWidth = (maxDepth + 1) * colWidth + 4;
+
+  // High-contrast alternating fills that pass WCAG AA against white text
+  const depthStyles = [
+    { bg: 'rgba(28, 76, 191, 0.25)', border: 'rgba(28, 76, 191, 0.5)' },   // ahead blue
+    { bg: 'rgba(0, 159, 220, 0.20)', border: 'rgba(0, 159, 220, 0.45)' },   // ahead cyan
+    { bg: 'rgba(139, 92, 246, 0.20)', border: 'rgba(139, 92, 246, 0.45)' }, // violet
+    { bg: 'rgba(20, 184, 166, 0.20)', border: 'rgba(20, 184, 166, 0.45)' }, // teal
+    { bg: 'rgba(249, 115, 22, 0.20)', border: 'rgba(249, 115, 22, 0.45)' }, // orange
+  ];
 
   return (
     <div
-      className="shrink-0 border-l border-[var(--color-border)] bg-[var(--color-surface-alt)] relative"
+      className="shrink-0 border-l border-[var(--color-border)] relative"
       style={{ width: `${totalWidth}px` }}
     >
-      {/* Header */}
+      {/* Header with help hint */}
       <div
-        className="border-b border-[var(--color-border)] flex items-center justify-center text-[10px] font-semibold uppercase tracking-wider text-[var(--color-text-muted)]"
+        className="border-b border-[var(--color-border)] bg-[var(--color-surface-alt)] flex flex-col items-center justify-center group/joinheader relative"
         style={{ height: `${rowHeight}px` }}
       >
-        Join
+        <span className="text-[10px] font-semibold uppercase tracking-wider text-[var(--color-text-muted)]">
+          Join
+        </span>
+        {/* Tooltip on hover */}
+        <div className="absolute top-full mt-1 right-0 hidden group-hover/joinheader:block z-30 pointer-events-none">
+          <div className="bg-[var(--color-text)] text-[var(--color-surface)] text-[10px] px-3 py-2 rounded-lg shadow-lg whitespace-nowrap max-w-[200px] text-wrap leading-relaxed">
+            Click any bracket to merge subnets back together. Each bracket shows the CIDR it will merge into.
+          </div>
+        </div>
       </div>
 
       {/* Brackets */}
       <div className="relative" style={{ height: `${leafCount * rowHeight}px` }}>
         {brackets.map((bracket) => {
-          const top = bracket.startLeafIdx * rowHeight + 2;
-          const height = (bracket.endLeafIdx - bracket.startLeafIdx + 1) * rowHeight - 4;
+          const top = bracket.startLeafIdx * rowHeight;
+          const height = (bracket.endLeafIdx - bracket.startLeafIdx + 1) * rowHeight;
           const left = bracket.depth * colWidth;
+          const depthStyle = depthStyles[bracket.depth % depthStyles.length];
 
           return (
             <button
               key={bracket.nodeId}
               onClick={() => joinSubnet(bracket.nodeId)}
-              className="absolute flex items-center justify-center text-[var(--color-text-muted)] hover:text-ahead-cyan transition-colors cursor-pointer group/bracket"
+              className="absolute flex items-center justify-center cursor-pointer transition-all rounded-sm group/bracket"
               style={{
-                top: `${top}px`,
-                height: `${height}px`,
-                left: `${left}px`,
-                width: `${colWidth - 2}px`,
+                top: `${top + 1}px`,
+                height: `${height - 2}px`,
+                left: `${left + 2}px`,
+                width: `${colWidth - 4}px`,
+                backgroundColor: depthStyle.bg,
+                border: `1.5px solid ${depthStyle.border}`,
               }}
-              aria-label={`Join into /${bracket.cidr}`}
-              title={`Join into /${bracket.cidr}`}
+              aria-label={`Click to merge these subnets back into /${bracket.cidr}`}
+              title={`Click to merge back into /${bracket.cidr}`}
             >
-              {/* Bracket line */}
-              <svg
-                className="w-full h-full"
-                viewBox="0 0 24 100"
-                preserveAspectRatio="none"
-                fill="none"
-                stroke="currentColor"
-                strokeWidth={1.5}
+              <span
+                className="text-[11px] font-mono font-bold whitespace-nowrap pointer-events-none transition-all group-hover/bracket:scale-110"
+                style={{
+                  writingMode: 'vertical-lr',
+                  transform: 'rotate(180deg)',
+                  color: 'var(--color-text)',
+                }}
               >
-                <path d="M4,2 L18,2 L18,98 L4,98" strokeLinecap="round" strokeLinejoin="round" />
-              </svg>
-              {/* CIDR label */}
-              <span className="absolute text-[9px] font-mono font-medium -rotate-90 whitespace-nowrap opacity-60 group-hover/bracket:opacity-100 transition-opacity pointer-events-none">
                 /{bracket.cidr}
               </span>
+              {/* Hover overlay */}
+              <div className="absolute inset-0 rounded-sm bg-white/0 group-hover/bracket:bg-white/10 transition-all" />
             </button>
           );
         })}
@@ -257,7 +274,7 @@ export default function SubnetTable() {
                 {columns.usableIps && <Th className="hidden xl:table-cell">Useable IPs</Th>}
                 {columns.hosts && <Th className="text-right">Hosts</Th>}
                 {columns.label && <Th>Label</Th>}
-                <Th className="text-center">Divide</Th>
+                <Th className="text-center">Actions</Th>
                 <Th className="w-10 pr-4" />
               </tr>
             </thead>

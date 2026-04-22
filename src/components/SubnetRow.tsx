@@ -110,18 +110,28 @@ export default function SubnetRow({ node, index, groups, columns, canMerge, merg
           </td>
         )}
 
-        {/* Divide */}
+        {/* Divide / Merge */}
         <td className="px-3 py-3 text-center whitespace-nowrap" onClick={(e) => e.stopPropagation()}>
-          {canSplit(prefix) ? (
-            <button
-              onClick={() => splitSubnet(node.id)}
-              className="text-ahead-cyan hover:text-ahead-cyan-light text-xs font-medium hover:underline underline-offset-2 transition-colors"
-            >
-              Divide
-            </button>
-          ) : (
-            <span className="text-xs text-[var(--color-text-muted)]">—</span>
-          )}
+          <div className="flex items-center justify-center gap-3">
+            {canSplit(prefix) ? (
+              <button
+                onClick={() => splitSubnet(node.id)}
+                className="text-ahead-cyan hover:text-ahead-cyan-light text-xs font-medium hover:underline underline-offset-2 transition-colors"
+              >
+                Divide
+              </button>
+            ) : (
+              <span className="text-xs text-[var(--color-text-muted)]">—</span>
+            )}
+            {canMerge && mergeParentId && (
+              <button
+                onClick={() => joinSubnet(mergeParentId)}
+                className="text-amber-400 hover:text-amber-300 text-xs font-medium hover:underline underline-offset-2 transition-colors"
+              >
+                Merge
+              </button>
+            )}
+          </div>
         </td>
 
         {/* Expand indicator */}
