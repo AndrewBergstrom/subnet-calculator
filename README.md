@@ -4,6 +4,8 @@ A modern, browser-based subnet calculator that replaces the workflow of using Da
 
 Built for network engineers, cloud architects, and anyone planning IP address spaces.
 
+**Live demo:** [https://andrewbergstrom.github.io/subnet-calculator/](https://andrewbergstrom.github.io/subnet-calculator/)
+
 ## Quick Start
 
 ```bash
