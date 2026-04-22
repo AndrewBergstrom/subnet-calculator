@@ -130,6 +130,7 @@ function Th({ children, className = '' }: { children?: React.ReactNode; classNam
 // Join bracket column — renders nested brackets like DaveC
 function JoinBrackets({ rootNode, leafCount, rowHeight }: { rootNode: SubnetNode; leafCount: number; rowHeight: number }) {
   const joinSubnet = useStore((s) => s.joinSubnet);
+  const darkMode = useStore((s) => s.darkMode);
   const brackets = buildBrackets(rootNode);
 
   if (brackets.length === 0) return null;
@@ -138,26 +139,41 @@ function JoinBrackets({ rootNode, leafCount, rowHeight }: { rootNode: SubnetNode
   const colWidth = 20;
   const totalWidth = (maxDepth + 1) * colWidth + 8;
 
-  // All warm/bright colors that contrast well against dark navy (#102033)
-  // No blues, purples, or teals — they disappear on our background
-  const depthColors = [
+  // Separate palettes per theme — dark: bright warm, light: bold saturated
+  const isDark = darkMode;
+  const depthColors = isDark ? [
+    // Dark mode — warm/bright, no blues or purples (approved palette)
     '#facc15', // yellow
     '#fb923c', // orange
     '#4ade80', // lime green
     '#f472b6', // pink
     '#f87171', // red
-    '#e2e8f0', // white
     '#fbbf24', // amber
     '#34d399', // emerald
-    '#f9a8d4', // light pink
     '#fdba74', // light orange
-    '#facc15', // repeat
+    '#f9a8d4', // light pink
+    '#e2e8f0', // near-white
+    '#facc15',
     '#fb923c',
+  ] : [
+    // Light mode — same hue order as dark, but darker/saturated for light bg
+    '#a16207', // dark yellow
+    '#c2410c', // dark orange
+    '#15803d', // dark green
+    '#be185d', // dark pink
+    '#dc2626', // dark red
+    '#92400e', // dark amber
+    '#047857', // dark emerald
+    '#ea580c', // burnt orange
+    '#db2777', // magenta
+    '#334155', // dark slate
+    '#a16207',
+    '#c2410c',
   ];
 
   return (
     <div
-      className="shrink-0 border-l border-[var(--color-border)] relative bg-[var(--color-surface-hover)]"
+      className="shrink-0 border-l border-[var(--color-border)] relative dark:bg-[var(--color-surface-hover)] bg-[#e2e8f0]"
       style={{ width: `${totalWidth}px` }}
     >
       {/* Header with help hint */}
