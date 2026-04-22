@@ -29,7 +29,11 @@ export default function SubnetRow({ node, index, groups, canMerge, mergeParentId
   const first = firstUsable(net, prefix, cloudMode);
   const last = lastUsable(net, prefix, cloudMode);
   const broadcast = broadcastAddress(net, prefix);
-  const displayColor = node.color || groupForRow?.color || null;
+
+  // Color logic: group color wins, individual color only when no group
+  const effectiveColor = groupForRow?.color || node.color || null;
+  const hasGroup = !!node.groupId;
+
   const animDelay = Math.min(index * 20, 200);
 
   const groupColor = groupForRow?.color;
@@ -54,7 +58,7 @@ export default function SubnetRow({ node, index, groups, canMerge, mergeParentId
         <td className="w-1.5 p-0">
           <div
             className="w-1.5 h-full min-h-[44px]"
-            style={{ backgroundColor: displayColor || 'transparent' }}
+            style={{ backgroundColor: effectiveColor || 'transparent' }}
           />
         </td>
 
@@ -119,43 +123,24 @@ export default function SubnetRow({ node, index, groups, canMerge, mergeParentId
       {expanded && (
         <tr className="animate-fade-in">
           <td className="p-0 w-1.5">
-            <div className="w-1.5 h-full" style={{ backgroundColor: displayColor || 'transparent' }} />
+            <div className="w-1.5 h-full" style={{ backgroundColor: effectiveColor || 'transparent' }} />
           </td>
           <td
             colSpan={7}
             className="px-4 py-4 bg-[var(--color-surface-alt)] border-b border-[var(--color-border)]"
+            onClick={(e) => e.stopPropagation()}
           >
             <div className="space-y-4">
-              {/* Color selection */}
-              <div className="flex items-center gap-3">
-                <span className="text-[10px] font-semibold uppercase tracking-wider text-[var(--color-text-muted)] w-14 shrink-0">Color</span>
-                <div className="flex items-center gap-2">
-                  {SUBNET_COLORS.map((color) => (
-                    <button
-                      key={color}
-                      onClick={() => updateSubnet(node.id, { color: node.color === color ? null : color })}
-                      className={`w-6 h-6 rounded-full transition-all hover:scale-110 ${node.color === color ? 'ring-2 ring-white ring-offset-2 ring-offset-[var(--color-surface-alt)]' : ''}`}
-                      style={{ backgroundColor: color }}
-                      aria-label={`Set color to ${color}`}
-                    />
-                  ))}
-                  {node.color && (
-                    <button
-                      onClick={() => updateSubnet(node.id, { color: null })}
-                      className="text-[10px] text-[var(--color-text-muted)] hover:text-[var(--color-text)] ml-1 underline underline-offset-2"
-                    >
-                      Clear
-                    </button>
-                  )}
-                </div>
-              </div>
-
               {/* Group */}
               <div className="flex items-center gap-3">
                 <span className="text-[10px] font-semibold uppercase tracking-wider text-[var(--color-text-muted)] w-14 shrink-0">Group</span>
                 <select
                   value={node.groupId || ''}
-                  onChange={(e) => updateSubnet(node.id, { groupId: e.target.value || null })}
+                  onChange={(e) => {
+                    const groupId = e.target.value || null;
+                    // When assigning a group, clear individual color
+                    updateSubnet(node.id, { groupId, ...(groupId ? { color: null } : {}) });
+                  }}
                   className="text-xs px-2.5 py-1.5 rounded-lg bg-[var(--color-surface)] border border-[var(--color-border)] focus:border-ahead-cyan focus:outline-none cursor-pointer transition-all"
                 >
                   <option value="">None</option>
@@ -166,7 +151,39 @@ export default function SubnetRow({ node, index, groups, canMerge, mergeParentId
                 {groups.length === 0 && (
                   <span className="text-[10px] text-[var(--color-text-muted)]">Create groups in the toolbar above</span>
                 )}
+                {groupForRow && (
+                  <span className="inline-flex items-center gap-1.5 text-[10px] text-[var(--color-text-secondary)]">
+                    <span className="w-2.5 h-2.5 rounded-full" style={{ backgroundColor: groupForRow.color }} />
+                    Color set by group
+                  </span>
+                )}
               </div>
+
+              {/* Color — only when no group assigned */}
+              {!hasGroup && (
+                <div className="flex items-center gap-3">
+                  <span className="text-[10px] font-semibold uppercase tracking-wider text-[var(--color-text-muted)] w-14 shrink-0">Color</span>
+                  <div className="flex items-center gap-2">
+                    {SUBNET_COLORS.map((color) => (
+                      <button
+                        key={color}
+                        onClick={() => updateSubnet(node.id, { color: node.color === color ? null : color })}
+                        className={`w-6 h-6 rounded-full transition-all hover:scale-110 ${node.color === color ? 'ring-2 ring-white ring-offset-2 ring-offset-[var(--color-surface-alt)]' : ''}`}
+                        style={{ backgroundColor: color }}
+                        aria-label={`Set color to ${color}`}
+                      />
+                    ))}
+                    {node.color && (
+                      <button
+                        onClick={() => updateSubnet(node.id, { color: null })}
+                        className="text-[10px] text-[var(--color-text-muted)] hover:text-[var(--color-text)] ml-1 underline underline-offset-2"
+                      >
+                        Clear
+                      </button>
+                    )}
+                  </div>
+                </div>
+              )}
 
               {/* Notes */}
               <div className="flex items-start gap-3">
@@ -180,12 +197,12 @@ export default function SubnetRow({ node, index, groups, canMerge, mergeParentId
                 />
               </div>
 
-              {/* Subnet details + Merge */}
-              <div className="flex items-center justify-between flex-wrap gap-3 pt-1 border-t border-[var(--color-border)]">
+              {/* Info + Merge */}
+              <div className="flex items-center justify-between flex-wrap gap-3 pt-2 border-t border-[var(--color-border)]">
                 <div className="flex items-center gap-5 text-xs text-[var(--color-text-secondary)] font-mono">
                   <span>Total: {totalAddresses(prefix).toLocaleString()}</span>
                   <span>Broadcast: {intToIp(broadcast)}</span>
-                  <span>/{prefix} = {usable.toLocaleString()} usable hosts</span>
+                  <span>/{prefix} = {usable.toLocaleString()} usable</span>
                 </div>
 
                 {canMerge && mergeParentId && (
