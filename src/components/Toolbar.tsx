@@ -23,7 +23,7 @@ export default function Toolbar() {
 
   const [showAddGroup, setShowAddGroup] = useState(false);
   const [newName, setNewName] = useState('');
-  const [newColor, setNewColor] = useState(SUBNET_COLORS[5]);
+  const [newColor, setNewColor] = useState<string>(SUBNET_COLORS[5]);
   const [importError, setImportError] = useState(false);
   const [copied, setCopied] = useState(false);
   const fileRef = useRef<HTMLInputElement>(null);

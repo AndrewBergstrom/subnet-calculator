@@ -1,7 +1,6 @@
 import type { SubnetNode, Group } from '../types';
 import { useStore } from '../store';
 import { totalAddresses } from '../lib/subnet-math';
-import type { ColumnVisibility } from '../types';
 import SubnetRow from './SubnetRow';
 
 function collectLeaves(node: SubnetNode): SubnetNode[] {
