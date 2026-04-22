@@ -23,7 +23,7 @@ export default function NetworkInput() {
           onChange={(e) => setValue(e.target.value)}
           placeholder="e.g. 10.0.0.0/16"
           className={`
-            w-52 px-4 py-2 rounded-xl font-mono text-sm
+            w-40 md:w-52 px-3 md:px-4 py-2 rounded-xl font-mono text-sm
             bg-[var(--color-surface-alt)] border
             outline-none transition-all duration-200
             focus:ring-2 focus:ring-ahead-cyan/40

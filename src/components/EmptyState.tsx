@@ -11,7 +11,7 @@ export default function EmptyState() {
         Enter a network CIDR in the header to get started. Split subnets, add labels and colors,
         organize with groups, and export your configurations.
       </p>
-      <div className="grid grid-cols-3 gap-4 max-w-lg">
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-4 max-w-lg">
         {[
           { title: 'Split & Join', desc: 'Visually split subnets into smaller blocks or join them back' },
           { title: 'Color & Label', desc: 'Annotate subnets with colors, labels, and notes in-place' },

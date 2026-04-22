@@ -50,12 +50,9 @@ export function firstUsable(network: number, prefix: number, cloudMode: CloudMod
   return (network + 1) >>> 0;
 }
 
-export function lastUsable(network: number, prefix: number, cloudMode: CloudMode): number {
+export function lastUsable(network: number, prefix: number, _cloudMode: CloudMode): number {
   const broadcast = broadcastAddress(network, prefix);
   if (prefix >= 31) return broadcast;
-  if (cloudMode === 'azure' || cloudMode === 'aws') {
-    return (broadcast - 1) >>> 0;
-  }
   return (broadcast - 1) >>> 0;
 }
 

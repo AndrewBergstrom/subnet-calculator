@@ -35,7 +35,7 @@ body {
   transition: background-color 0.3s ease, color 0.3s ease;
 }
 
-.dark body {
+.dark {
   --color-surface: #102033;
   --color-surface-alt: #162a40;
   --color-surface-hover: #1a3350;

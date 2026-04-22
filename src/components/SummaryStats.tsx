@@ -29,7 +29,7 @@ export default function SummaryStats() {
   ];
 
   return (
-    <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
+    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
       {stats.map((s) => (
         <div key={s.label} className="rounded-2xl border border-[var(--color-border)] bg-[var(--color-surface)] p-4">
           <div className="text-[10px] font-semibold uppercase tracking-wider text-[var(--color-text-muted)]">

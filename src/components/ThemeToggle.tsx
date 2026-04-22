@@ -14,6 +14,7 @@ export default function ThemeToggle() {
         transition-all duration-200 active:scale-90
       "
       title={darkMode ? 'Switch to light mode' : 'Switch to dark mode'}
+      aria-label={darkMode ? 'Switch to light mode' : 'Switch to dark mode'}
     >
       {darkMode ? (
         <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
