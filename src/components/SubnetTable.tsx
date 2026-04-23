@@ -285,9 +285,9 @@ export default function SubnetTable() {
       {/* Address space map */}
       <AddressMap rootNode={rootNode} groups={groups} />
 
-      <div className="flex">
+      <div className="flex" style={{ minWidth: 'max-content' }}>
         {/* Main table */}
-        <div className="flex-1 min-w-0">
+        <div className="flex-1">
           <table className="w-full text-left">
             <thead>
               <tr className="border-b border-[var(--color-border)] bg-[var(--color-surface-alt)]">
