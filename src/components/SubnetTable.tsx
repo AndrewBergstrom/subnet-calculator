@@ -281,7 +281,7 @@ export default function SubnetTable() {
   }
 
   return (
-    <div className="rounded-2xl border border-[var(--color-border)] overflow-hidden bg-[var(--color-surface)]">
+    <div className="rounded-2xl border border-[var(--color-border)] overflow-hidden bg-[var(--color-surface)] overflow-x-auto">
       {/* Address space map */}
       <AddressMap rootNode={rootNode} groups={groups} />
 
