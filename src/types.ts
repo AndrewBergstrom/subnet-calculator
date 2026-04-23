@@ -33,6 +33,16 @@ export const DEFAULT_COLUMNS: ColumnVisibility = {
   label: true,
 };
 
+export interface SavedProject {
+  id: string;
+  name: string;
+  savedAt: number; // timestamp
+  rootNode: SubnetNode | null;
+  groups: Group[];
+  cloudMode: CloudMode;
+  columns: ColumnVisibility;
+}
+
 export interface AppState {
   rootNode: SubnetNode | null;
   groups: Group[];
@@ -53,4 +63,13 @@ export interface AppState {
   reset: () => void;
   exportState: () => string;
   importState: (json: string) => void;
+
+  // Projects
+  projects: SavedProject[];
+  activeProjectId: string | null;
+  saveProject: (name: string) => void;
+  loadProject: (id: string) => void;
+  deleteProject: (id: string) => void;
+  renameProject: (id: string, name: string) => void;
+  updateActiveProject: () => void;
 }

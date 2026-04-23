@@ -3,6 +3,7 @@ import type { SubnetNode, Group, ColumnVisibility } from '../types';
 import { intToIp, subnetMaskString, totalAddresses, usableHosts, firstUsable, lastUsable, broadcastAddress, canSplit } from '../lib/subnet-math';
 import { useStore } from '../store';
 import { SUBNET_COLORS } from '../constants';
+import GroupDropdown from './GroupDropdown';
 
 interface SubnetRowProps {
   node: SubnetNode;
@@ -160,23 +161,13 @@ export default function SubnetRow({ node, index, groups, columns, canMerge, merg
               {/* Group */}
               <div className="flex items-center gap-3">
                 <span className="text-[10px] font-semibold uppercase tracking-wider text-[var(--color-text-muted)] w-14 shrink-0">Group</span>
-                <select
-                  value={node.groupId || ''}
-                  onChange={(e) => {
-                    const groupId = e.target.value || null;
-                    // When assigning a group, clear individual color
+                <GroupDropdown
+                  value={node.groupId}
+                  groups={groups}
+                  onChange={(groupId) => {
                     updateSubnet(node.id, { groupId, ...(groupId ? { color: null } : {}) });
                   }}
-                  className="text-xs px-2.5 py-1.5 rounded-lg bg-[var(--color-surface)] border border-[var(--color-border)] focus:border-ahead-cyan focus:outline-none cursor-pointer transition-all"
-                >
-                  <option value="">None</option>
-                  {groups.map((g) => (
-                    <option key={g.id} value={g.id}>{g.name}</option>
-                  ))}
-                </select>
-                {groups.length === 0 && (
-                  <span className="text-[10px] text-[var(--color-text-muted)]">Create groups in the toolbar above</span>
-                )}
+                />
                 {groupForRow && (
                   <span className="inline-flex items-center gap-1.5 text-[10px] text-[var(--color-text-secondary)]">
                     <span className="w-2.5 h-2.5 rounded-full" style={{ backgroundColor: groupForRow.color }} />

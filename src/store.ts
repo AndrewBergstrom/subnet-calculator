@@ -1,8 +1,9 @@
 import { create } from 'zustand';
-import type { AppState, SubnetNode, CloudMode, ColumnVisibility } from './types';
+import type { AppState, SubnetNode, CloudMode, ColumnVisibility, SavedProject } from './types';
 import { DEFAULT_COLUMNS } from './types';
 import { parseCidr, networkAddress } from './lib/subnet-math';
 import { exportToJson, importFromJson } from './lib/export';
+import { loadProjects, saveProjects, setActiveProjectId } from './lib/projects';
 
 function createNode(netAddr: number, cidr: number, id: string): SubnetNode {
   return {
@@ -66,7 +67,7 @@ function encodeStateToUrl(state: Pick<AppState, 'rootNode' | 'groups' | 'cloudMo
     const encoded = btoa(encodeURIComponent(json));
     window.history.replaceState(null, '', `#${encoded}`);
   } catch {
-    // Silently fail — URL sharing is optional
+    // Silently fail
   }
 }
 
@@ -88,8 +89,22 @@ function decodeStateFromUrl(): { rootNode: SubnetNode; groups: any[]; cloudMode:
   }
 }
 
-// Try to load initial state from URL
-const urlState = decodeStateFromUrl();
+// --- Sync URL for sharing ---
+
+function syncUrl(state: Pick<AppState, 'rootNode' | 'groups' | 'cloudMode' | 'columns'>): void {
+  encodeStateToUrl(state);
+}
+
+// Load initial state from URL only (for shared links)
+let urlState: ReturnType<typeof decodeStateFromUrl> = null;
+let initialProjects: SavedProject[] = [];
+
+try {
+  urlState = decodeStateFromUrl();
+  initialProjects = loadProjects();
+} catch {
+  // Start fresh on any error
+}
 
 export const useStore = create<AppState>((set, get) => ({
   rootNode: urlState?.rootNode || null,
@@ -97,15 +112,16 @@ export const useStore = create<AppState>((set, get) => ({
   cloudMode: urlState?.cloudMode || 'none',
   darkMode: true,
   columns: urlState?.columns || { ...DEFAULT_COLUMNS },
+  projects: initialProjects,
+  activeProjectId: null,
 
   setNetwork: (cidrStr: string) => {
     const parsed = parseCidr(cidrStr);
     if (!parsed) return;
     const netAddr = networkAddress(parsed.ip, parsed.prefix);
     const rootNode = createNode(netAddr, parsed.prefix, 'root');
-    set({ rootNode, groups: [] });
-    const state = get();
-    encodeStateToUrl(state);
+    set({ rootNode, groups: [], activeProjectId: null });
+    syncUrl(get());
   },
 
   splitSubnet: (nodeId: string) => {
@@ -117,7 +133,7 @@ export const useStore = create<AppState>((set, get) => ({
     const split = splitNode(target);
     Object.assign(target, split);
     set({ rootNode: newRoot });
-    encodeStateToUrl(get());
+    syncUrl(get());
   },
 
   joinSubnet: (nodeId: string) => {
@@ -132,7 +148,7 @@ export const useStore = create<AppState>((set, get) => ({
     target.color = null;
     target.groupId = null;
     set({ rootNode: newRoot });
-    encodeStateToUrl(get());
+    syncUrl(get());
   },
 
   updateSubnet: (nodeId, updates) => {
@@ -143,14 +159,14 @@ export const useStore = create<AppState>((set, get) => ({
     if (!target) return;
     Object.assign(target, updates);
     set({ rootNode: newRoot });
-    encodeStateToUrl(get());
+    syncUrl(get());
   },
 
   addGroup: (name, color) => {
     set((state) => ({
       groups: [...state.groups, { id: crypto.randomUUID(), name, color }],
     }));
-    encodeStateToUrl(get());
+    syncUrl(get());
   },
 
   removeGroup: (groupId) => {
@@ -165,7 +181,7 @@ export const useStore = create<AppState>((set, get) => ({
       groups: state.groups.filter((g) => g.id !== groupId),
       rootNode: newRoot,
     }));
-    encodeStateToUrl(get());
+    syncUrl(get());
   },
 
   updateGroup: (groupId, updates) => {
@@ -174,12 +190,12 @@ export const useStore = create<AppState>((set, get) => ({
         g.id === groupId ? { ...g, ...updates } : g
       ),
     }));
-    encodeStateToUrl(get());
+    syncUrl(get());
   },
 
   setCloudMode: (mode: CloudMode) => {
     set({ cloudMode: mode });
-    encodeStateToUrl(get());
+    syncUrl(get());
   },
 
   toggleDarkMode: () => {
@@ -194,7 +210,7 @@ export const useStore = create<AppState>((set, get) => ({
     set((state) => ({
       columns: { ...state.columns, [col]: !state.columns[col] },
     }));
-    encodeStateToUrl(get());
+    syncUrl(get());
   },
 
   reset: () => {
@@ -203,6 +219,7 @@ export const useStore = create<AppState>((set, get) => ({
       groups: [],
       cloudMode: 'none',
       columns: { ...DEFAULT_COLUMNS },
+      activeProjectId: null,
     });
     window.history.replaceState(null, '', window.location.pathname);
   },
@@ -215,11 +232,87 @@ export const useStore = create<AppState>((set, get) => ({
   importState: (json: string) => {
     const data = importFromJson(json);
     if (!data) return;
+    // Auto-save imported config as a project
+    const project: SavedProject = {
+      id: crypto.randomUUID(),
+      name: `Import ${new Date().toLocaleDateString()}`,
+      savedAt: Date.now(),
+      rootNode: data.rootNode,
+      groups: data.groups,
+      cloudMode: data.cloudMode,
+      columns: get().columns,
+    };
+    const projects = [...get().projects, project];
+    saveProjects(projects);
+    setActiveProjectId(project.id);
     set({
       rootNode: data.rootNode,
       groups: data.groups,
       cloudMode: data.cloudMode,
+      projects,
+      activeProjectId: project.id,
     });
-    encodeStateToUrl(get());
+    syncUrl(get());
+  },
+
+  // --- Project management ---
+
+  saveProject: (name: string) => {
+    const { rootNode, groups, cloudMode, columns } = get();
+    const project: SavedProject = {
+      id: crypto.randomUUID(),
+      name,
+      savedAt: Date.now(),
+      rootNode,
+      groups,
+      cloudMode,
+      columns,
+    };
+    const projects = [...get().projects, project];
+    saveProjects(projects);
+    setActiveProjectId(project.id);
+    set({ projects, activeProjectId: project.id });
+  },
+
+  loadProject: (id: string) => {
+    const project = get().projects.find((p) => p.id === id);
+    if (!project) return;
+    setActiveProjectId(id);
+    set({
+      rootNode: project.rootNode,
+      groups: project.groups,
+      cloudMode: project.cloudMode,
+      columns: project.columns || { ...DEFAULT_COLUMNS },
+      activeProjectId: id,
+    });
+    syncUrl(get());
+  },
+
+  deleteProject: (id: string) => {
+    const projects = get().projects.filter((p) => p.id !== id);
+    saveProjects(projects);
+    const activeProjectId = get().activeProjectId === id ? null : get().activeProjectId;
+    if (get().activeProjectId === id) setActiveProjectId(null);
+    set({ projects, activeProjectId });
+  },
+
+  renameProject: (id: string, name: string) => {
+    const projects = get().projects.map((p) =>
+      p.id === id ? { ...p, name } : p
+    );
+    saveProjects(projects);
+    set({ projects });
+  },
+
+  updateActiveProject: () => {
+    const { activeProjectId, rootNode, groups, cloudMode, columns } = get();
+    if (!activeProjectId) return;
+    const projects = get().projects.map((p) =>
+      p.id === activeProjectId
+        ? { ...p, rootNode, groups, cloudMode, columns, savedAt: Date.now() }
+        : p
+    );
+    saveProjects(projects);
+    set({ projects });
   },
 }));
